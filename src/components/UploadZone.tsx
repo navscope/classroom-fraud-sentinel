@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { UploadCloud, FileText, X } from 'lucide-react';
+import { UploadCloud, FileText, X, FileIcon, File } from 'lucide-react';
 import { UploadedFile } from '@/types';
 import { extractTextFromFile } from '@/services/detectionService';
 
@@ -16,6 +16,7 @@ export const UploadZone = ({ onTextExtracted, isProcessing }: UploadZoneProps) =
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionProgress, setExtractionProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -45,36 +46,68 @@ export const UploadZone = ({ onTextExtracted, isProcessing }: UploadZoneProps) =
     }
   };
 
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) {
+      return <FileText className="h-5 w-5 text-red-500" />;
+    } else if (fileType.includes('word') || fileType.includes('doc')) {
+      return <FileText className="h-5 w-5 text-blue-500" />;
+    } else if (fileType.includes('text')) {
+      return <FileText className="h-5 w-5 text-gray-500" />;
+    } else {
+      return <File className="h-5 w-5 text-primary" />;
+    }
+  };
+
   const processFile = async (file: File) => {
+    // Extended list of MIME types for better file support
     const allowedTypes = [
       'text/plain', 
       'application/pdf', 
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.oasis.opendocument.text',
+      'application/rtf',
+      'text/markdown',
+      'text/csv'
     ];
     
-    if (!allowedTypes.includes(file.type)) {
+    // Check if file type is supported
+    const fileTypeSupported = allowedTypes.some(type => file.type.includes(type.split('/')[1]));
+    
+    if (!fileTypeSupported && !allowedTypes.includes(file.type)) {
       toast({
         title: "Unsupported file type",
-        description: "Please upload a text, PDF, or Word document.",
+        description: "Please upload a text, PDF, Word document, or other supported text format.",
         variant: "destructive",
       });
       return;
     }
     
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
       toast({
         title: "File too large",
-        description: "Please upload a file smaller than 5MB.",
+        description: "Please upload a file smaller than 10MB.",
         variant: "destructive",
       });
       return;
     }
     
     setIsExtracting(true);
+    setExtractionProgress(10); // Start progress
     
     try {
+      // Create a simulated progress update
+      const progressInterval = setInterval(() => {
+        setExtractionProgress(prev => {
+          const newProgress = prev + Math.random() * 15;
+          return newProgress < 90 ? newProgress : 90;
+        });
+      }, 500);
+      
       const extractedText = await extractTextFromFile(file);
+      
+      clearInterval(progressInterval);
+      setExtractionProgress(100);
       
       if (extractedText.length < 50) {
         toast({
@@ -95,18 +128,19 @@ export const UploadZone = ({ onTextExtracted, isProcessing }: UploadZoneProps) =
       onTextExtracted(extractedText);
       
       toast({
-        title: "File uploaded successfully",
-        description: `"${file.name}" has been processed.`,
+        title: "File processed successfully",
+        description: `"${file.name}" has been analyzed and text extracted.`,
       });
     } catch (error) {
       console.error("Error processing file:", error);
       toast({
         title: "Error processing file",
-        description: "Unable to extract text from the uploaded file.",
+        description: error instanceof Error ? error.message : "Unable to extract text from the uploaded file.",
         variant: "destructive",
       });
     } finally {
       setIsExtracting(false);
+      setExtractionProgress(0);
     }
   };
 
@@ -124,7 +158,7 @@ export const UploadZone = ({ onTextExtracted, isProcessing }: UploadZoneProps) =
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-secondary rounded-md">
-                <FileText className="h-5 w-5 text-primary" />
+                {getFileIcon(file.type)}
               </div>
               <div>
                 <p className="font-medium text-sm">{file.name}</p>
@@ -162,17 +196,26 @@ export const UploadZone = ({ onTextExtracted, isProcessing }: UploadZoneProps) =
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium">
-                {isExtracting ? "Processing file..." : "Drop file here or click to upload"}
+                {isExtracting ? `Processing file... ${Math.round(extractionProgress)}%` : "Drop file here or click to upload"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Supports TXT, PDF, DOC, DOCX (max 5MB)
+                Supports TXT, PDF, DOC, DOCX, RTF, ODT, MD, CSV (max 10MB)
               </p>
             </div>
+            
+            {isExtracting && (
+              <div className="w-full bg-secondary rounded-full h-2 mt-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${extractionProgress}%` }}
+                ></div>
+              </div>
+            )}
           </div>
           <input
             ref={fileInputRef}
             type="file"
-            accept=".txt,.pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            accept=".txt,.pdf,.doc,.docx,.rtf,.odt,.md,.csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/rtf,application/vnd.oasis.opendocument.text,text/markdown,text/csv"
             className="hidden"
             onChange={handleFileChange}
             disabled={isExtracting}
