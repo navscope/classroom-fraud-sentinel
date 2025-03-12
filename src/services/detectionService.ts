@@ -37,6 +37,12 @@ export async function login(email: string, password: string): Promise<{success: 
     return { success: false, message: response.data.message || 'Login failed' };
   } catch (error) {
     console.error('Login error:', error);
+    if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+      return { 
+        success: false, 
+        message: 'Unable to connect to the server. Please make sure the backend server is running at ' + API_BASE_URL
+      };
+    }
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'Login failed. Please try again.'
@@ -102,6 +108,15 @@ export async function detectAiContent(text: string): Promise<DetectionResult> {
     };
   } catch (error) {
     console.error('Error detecting AI content:', error);
+    if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+      return {
+        aiProbability: 0,
+        humanProbability: 0,
+        confidence: 0,
+        status: 'error',
+        error: `Unable to connect to the server at ${API_BASE_URL}. Please make sure the backend server is running.`
+      };
+    }
     return {
       aiProbability: 0,
       humanProbability: 0,
@@ -142,6 +157,9 @@ export async function extractTextFromFile(file: File): Promise<string> {
     formData.append('file', file);
     
     const headers = isAuthenticated() ? { Authorization: `Bearer ${getToken()}` } : {};
+    
+    console.log(`Extracting text from ${file.name} (${file.type}) using API at ${API_BASE_URL}/extract`);
+    
     const response = await axios.post(`${API_BASE_URL}/extract`, formData, {
       headers: {
         ...headers,
@@ -156,6 +174,9 @@ export async function extractTextFromFile(file: File): Promise<string> {
     }
   } catch (error) {
     console.error('Error extracting text from file:', error);
+    if (axios.isAxiosError(error) && error.code === 'ERR_NETWORK') {
+      throw new Error(`Unable to connect to the server at ${API_BASE_URL}. Please make sure the backend server is running.`);
+    }
     throw new Error(error instanceof Error ? error.message : 'Failed to extract text from file');
   }
 }
