@@ -51,14 +51,14 @@ const HistoryPage = () => {
       );
     } else if (aiProbability > 0.4) {
       return (
-        <Badge variant="warning" className="flex items-center gap-1 bg-yellow-500">
+        <Badge variant="secondary" className="flex items-center gap-1 bg-yellow-500 text-white">
           <HelpCircle className="h-3 w-3" />
           Moderate AI Indicators
         </Badge>
       );
     } else {
       return (
-        <Badge variant="success" className="flex items-center gap-1 bg-green-500">
+        <Badge variant="outline" className="flex items-center gap-1 bg-green-500 text-white">
           <CheckCircle className="h-3 w-3" />
           Likely Human
         </Badge>
