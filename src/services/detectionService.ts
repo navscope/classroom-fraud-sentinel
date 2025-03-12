@@ -1,9 +1,9 @@
 
+import axios from 'axios';
 import { DetectionResult } from '@/types';
 
-// This would be replaced with an actual API key in a production environment
-// In a real application, this should be stored securely on the backend
-const API_KEY = 'demo-api-key';
+// Set the base URL for API calls
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export async function detectAiContent(text: string): Promise<DetectionResult> {
   if (!text || text.trim().length < 50) {
@@ -19,32 +19,11 @@ export async function detectAiContent(text: string): Promise<DetectionResult> {
   try {
     console.log('Sending text for AI detection:', text.substring(0, 100) + '...');
     
-    // For demo purposes, we're simulating an API call with a timeout
-    // In a real application, this would be an actual API call
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        // This is a simulated response for demonstration
-        // In a real app, we would make an actual API request to a detection service
-        
-        // Generate a somewhat random result for demo purposes
-        const aiScore = Math.random() * 0.7 + 0.2; // Between 0.2 and 0.9
-        
-        resolve({
-          aiProbability: parseFloat(aiScore.toFixed(2)),
-          humanProbability: parseFloat((1 - aiScore).toFixed(2)),
-          confidence: parseFloat((0.7 + Math.random() * 0.25).toFixed(2)),
-          suggestedAction: aiScore > 0.7 
-            ? 'Review carefully - high probability of AI-generated content'
-            : aiScore > 0.4 
-              ? 'Some indicators of AI content - further review recommended'
-              : 'Likely human-written content',
-          details: {
-            flaggedSentences: generateFlaggedSentences(text, aiScore),
-          },
-          status: 'success'
-        });
-      }, 1500); // Simulate network delay
-    });
+    const response = await axios.post(`${API_BASE_URL}/detect`, { text });
+    return {
+      ...response.data,
+      status: 'success'
+    };
   } catch (error) {
     console.error('Error detecting AI content:', error);
     return {
@@ -52,23 +31,9 @@ export async function detectAiContent(text: string): Promise<DetectionResult> {
       humanProbability: 0,
       confidence: 0,
       status: 'error',
-      error: 'Failed to analyze text. Please try again later.'
+      error: error instanceof Error ? error.message : 'Failed to analyze text. Please try again later.'
     };
   }
-}
-
-// Helper function to generate random flagged sentences for the demo
-function generateFlaggedSentences(text: string, overallScore: number) {
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  
-  return sentences
-    .filter(() => Math.random() > 0.7) // Randomly select some sentences
-    .map(sentence => ({
-      text: sentence,
-      score: Math.min(overallScore + (Math.random() * 0.4 - 0.2), 0.99) // Score close to overall score
-    }))
-    .sort((a, b) => b.score - a.score) // Sort by highest score first
-    .slice(0, 3); // Take top 3
 }
 
 // In a real implementation, this would process the file and extract text
@@ -91,4 +56,14 @@ export async function extractTextFromFile(file: File): Promise<string> {
     
     reader.readAsText(file);
   });
+}
+
+export async function getDetectionHistory() {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/history`);
+    return response.data.history;
+  } catch (error) {
+    console.error('Error fetching detection history:', error);
+    throw new Error('Failed to fetch detection history');
+  }
 }

@@ -1,9 +1,11 @@
 
 import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -24,7 +26,7 @@ export const Header = () => {
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <div className="flex items-center space-x-2 animate-fade-in">
+        <Link to="/" className="flex items-center space-x-2 animate-fade-in">
           <div className="h-10 w-10 rounded-md bg-primary flex items-center justify-center">
             <span className="text-white font-bold text-lg">FD</span>
           </div>
@@ -36,15 +38,27 @@ export const Header = () => {
               Classroom Assignment Verification
             </p>
           </div>
-        </div>
+        </Link>
         
         <nav className="hidden md:flex items-center space-x-6">
-          <a href="#" className="text-sm font-medium hover:text-primary transition-colors btn-transition">
+          <Link 
+            to="/" 
+            className={cn(
+              "text-sm font-medium transition-colors btn-transition",
+              location.pathname === "/" ? "text-primary" : "hover:text-primary"
+            )}
+          >
             Home
-          </a>
-          <a href="#" className="text-sm font-medium hover:text-primary transition-colors btn-transition">
-            How It Works
-          </a>
+          </Link>
+          <Link 
+            to="/history" 
+            className={cn(
+              "text-sm font-medium transition-colors btn-transition",
+              location.pathname === "/history" ? "text-primary" : "hover:text-primary"
+            )}
+          >
+            History
+          </Link>
           <a href="#" className="text-sm font-medium hover:text-primary transition-colors btn-transition">
             About
           </a>
